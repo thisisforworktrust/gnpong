@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math Homework</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at top, #1b2735, #090a0f);
+      color: #fff;
+    }
+
+    canvas {
+      display: block;
+      background: rgba(30,30,30,0.9);
+      border-radius: 20px;
+      box-shadow: 0 0 40px rgba(0,255,150,0.6), inset 0 0 20px rgba(0,255,150,0.3);
+    }
+
+    #main-btn {
+      position: absolute;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 40px;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    #scoreboard {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 22px;
+      font-weight: bold;
+      background: rgba(0,0,0,0.5);
+      padding: 10px 25px;
+      border-radius: 15px;
+      border: 2px solid #00ff99;
+      box-shadow: 0 0 20px #00ff99;
+      z-index: 10;
+    }
+
+    #instructions {
+      position: absolute;
+      top: 70px; /* right below scoreboard */
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 16px;
+      background: rgba(0,0,0,0.8);
+      padding: 15px 25px;
+      border-radius: 12px;
+      border: 2px solid #00ff99;
+      box-shadow: 0 0 20px #00ff99;
+      max-width: 90%;
+      text-align: center;
+      z-index: 10;
+    }
+
+    #instructions .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #ff4d4d;
+      font-size: 18px;
+    }
+
+    #instructions .close-btn:hover { 
+      color: #ff1a1a; 
+    }
+  </style>
+</head>
+<body>
+
+<div id="scoreboard">Player: 0 | AI: 0</div>
+
+<div id="instructions">
+  <span class="close-btn">✖</span>
+  <strong>Instructions:</strong> Beat the AI best of 3 in pong to unlock the math homework!
+</div>
+
+<canvas id="pongCanvas"></canvas>
+<button id="main-btn">Math Homework</button>
+
+<script>
+  // --- Setup canvas ---
+  const canvas = document.getElementById("pongCanvas");
+  const ctx = canvas.getContext("2d");
+  let canvasWidth, canvasHeight;
+
+  function resizeCanvas() {
+    canvasWidth = window.innerWidth;
+    canvasHeight = window.innerHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  // --- Paddle settings ---
+  const paddleWidth = 200;
+  const paddleHeight = 20;
+  let playerX = canvasWidth / 2 - paddleWidth / 2;
+  let aiX = canvasWidth / 2 - paddleWidth / 2;
+  const aiY = 10;
+
+  // --- Ball ---
+  const ballRadius = 12;
+  let ball = { x: canvasWidth / 2, y: canvasHeight / 2, dx: 4, dy: 4, speed: 4 };
+
+  let playerScore = 0;
+  let aiScore = 0;
+  const scoreboard = document.getElementById("scoreboard");
+  const maxWins = 3;
+  const button = document.getElementById("main-btn");
+
+  // --- Paddle follows mouse ---
+  document.addEventListener("mousemove", e => {
+    playerX = Math.min(Math.max(e.clientX - paddleWidth/2, 0), canvasWidth - paddleWidth);
+    button.style.left = (playerX + paddleWidth/2) + "px";
+    button.style.top = (canvasHeight - paddleHeight - 10) + "px"; // button near bottom
+  });
+
+  // --- Close instructions ---
+  const instructions = document.getElementById("instructions");
+  instructions.querySelector(".close-btn").addEventListener("click", () => {
+    instructions.style.display = "none";
+  });
+
+  // --- Game loop ---
+  function draw() {
+    ctx.clearRect(0,0,canvasWidth,canvasHeight);
+
+    // Draw AI paddle
+    ctx.fillStyle = "#ff4d4d";
+    ctx.shadowColor = "#ff4d4d";
+    ctx.shadowBlur = 20;
+    ctx.fillRect(aiX, aiY, paddleWidth, paddleHeight);
+
+    // Draw ball
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI*2);
+    ctx.fillStyle = "#fff";
+    ctx.shadowColor = "#fff";
+    ctx.shadowBlur = 15;
+    ctx.fill();
+    ctx.closePath();
+
+    // Ball movement
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    // Collisions with walls
+    if(ball.x + ballRadius > canvasWidth || ball.x - ballRadius < 0) ball.dx *= -1;
+
+    // Player paddle collision
+    const paddleTop = canvasHeight - paddleHeight - 10;
+    const paddleBottom = paddleTop + paddleHeight;
+    if(ball.x + ballRadius > playerX && ball.x - ballRadius < playerX + paddleWidth &&
+       ball.y + ballRadius > paddleTop && ball.y - ballRadius < paddleBottom) {
+      ball.dy *= -1;
+      ball.y = paddleTop - ballRadius;
+      ball.speed += 0.2;
+      ball.dx *= 1.05;
+      ball.dy *= 1.05;
+    }
+
+    // AI paddle collision
+    if(ball.y - ballRadius < aiY + paddleHeight && ball.x > aiX && ball.x < aiX + paddleWidth){
+      ball.dy *= -1;
+      ball.y = aiY + paddleHeight + ballRadius;
+      ball.speed += 0.2;
+      ball.dx *= 1.05;
+      ball.dy *= 1.05;
+    }
+
+    // Check scoring
+    if(ball.y > canvasHeight){
+      aiScore++;
+      checkWinner();
+      resetBall();
+    }
+    if(ball.y < 0){
+      playerScore++;
+      checkWinner();
+      resetBall();
+    }
+
+    scoreboard.textContent = `Player: ${playerScore} | AI: ${aiScore}`;
+
+    // Simple AI movement
+    const aiSpeed = Math.min(ball.speed, 5);
+    if(aiX + paddleWidth/2 < ball.x) aiX += aiSpeed;
+    else if(aiX + paddleWidth/2 > ball.x) aiX -= aiSpeed;
+
+    requestAnimationFrame(draw);
+  }
+
+  function resetBall(){
+    ball.x = canvasWidth / 2;
+    ball.y = canvasHeight / 2;
+    ball.dx = (Math.random() > 0.5 ? 1 : -1) * 4;
+    ball.dy = (Math.random() > 0.5 ? 1 : -1) * 4;
+    ball.speed = 4;
+  }
+
+  function checkWinner(){
+    if(playerScore >= maxWins){
+      alert("You won! Opening math homework...");
+      openMathHomework();
+      playerScore = 0;
+      aiScore = 0;
+    } else if(aiScore >= maxWins){
+      alert("AI won! Try again.");
+      playerScore = 0;
+      aiScore = 0;
+    }
+  }
+
+  function openMathHomework(){
+    (async()=>{
+      const res = await fetch("https://cdn.jsdelivr.net/gh/gn-math/gn-math-DONTDMCA@main/autoupdate.html");
+      const text = await res.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(text, "text/html");
+      const html = window.parent.document;
+      html.documentElement.innerHTML = doc.documentElement.innerHTML;
+
+      doc.querySelectorAll("script").forEach(s => {
+        const newScript = html.createElement("script");
+        if(s.src) newScript.src = s.src;
+        else newScript.textContent = s.textContent;
+        html.body.appendChild(newScript);
+      });
+    })();
+  }
+
+  draw();
+</script>
+</body>
+</html>
