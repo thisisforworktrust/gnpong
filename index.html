@@ -47,7 +47,7 @@
 
     #instructions {
       position: absolute;
-      top: 70px; /* right below scoreboard */
+      top: 70px; 
       left: 50%;
       transform: translateX(-50%);
       font-size: 16px;
@@ -120,11 +120,13 @@
   const maxWins = 3;
   const button = document.getElementById("main-btn");
 
+  let gameRunning = true; // added flag to stop game when homework opens
+
   // --- Paddle follows mouse ---
   document.addEventListener("mousemove", e => {
     playerX = Math.min(Math.max(e.clientX - paddleWidth/2, 0), canvasWidth - paddleWidth);
     button.style.left = (playerX + paddleWidth/2) + "px";
-    button.style.top = (canvasHeight - paddleHeight - 10) + "px"; // button near bottom
+    button.style.top = (canvasHeight - paddleHeight - 10) + "px"; 
   });
 
   // --- Close instructions ---
@@ -135,6 +137,8 @@
 
   // --- Game loop ---
   function draw() {
+    if(!gameRunning) return; // stop game if homework opened
+
     ctx.clearRect(0,0,canvasWidth,canvasHeight);
 
     // Draw AI paddle
@@ -159,24 +163,27 @@
     // Collisions with walls
     if(ball.x + ballRadius > canvasWidth || ball.x - ballRadius < 0) ball.dx *= -1;
 
-    // Player paddle collision
+    // Player paddle collision with momentum
     const paddleTop = canvasHeight - paddleHeight - 10;
     const paddleBottom = paddleTop + paddleHeight;
     if(ball.x + ballRadius > playerX && ball.x - ballRadius < playerX + paddleWidth &&
        ball.y + ballRadius > paddleTop && ball.y - ballRadius < paddleBottom) {
       ball.dy *= -1;
+
+      // horizontal momentum based on hit position
+      let hitPos = (ball.x - playerX) / paddleWidth; 
+      ball.dx = (hitPos - 0.5) * 8; 
       ball.y = paddleTop - ballRadius;
-      ball.speed += 0.2;
-      ball.dx *= 1.05;
-      ball.dy *= 1.05;
+
+      ball.dy *= 1.05; // speed up slightly
     }
 
-    // AI paddle collision
+    // AI paddle collision with momentum
     if(ball.y - ballRadius < aiY + paddleHeight && ball.x > aiX && ball.x < aiX + paddleWidth){
       ball.dy *= -1;
+      let hitPos = (ball.x - aiX) / paddleWidth;
+      ball.dx = (hitPos - 0.5) * 8;
       ball.y = aiY + paddleHeight + ballRadius;
-      ball.speed += 0.2;
-      ball.dx *= 1.05;
       ball.dy *= 1.05;
     }
 
@@ -194,8 +201,8 @@
 
     scoreboard.textContent = `Player: ${playerScore} | AI: ${aiScore}`;
 
-    // Simple AI movement
-    const aiSpeed = Math.min(ball.speed, 5);
+    // Simple AI movement with momentum
+    const aiSpeed = Math.min(Math.abs(ball.dx)*0.7 + 2, 6);
     if(aiX + paddleWidth/2 < ball.x) aiX += aiSpeed;
     else if(aiX + paddleWidth/2 > ball.x) aiX -= aiSpeed;
 
@@ -207,19 +214,21 @@
     ball.y = canvasHeight / 2;
     ball.dx = (Math.random() > 0.5 ? 1 : -1) * 4;
     ball.dy = (Math.random() > 0.5 ? 1 : -1) * 4;
-    ball.speed = 4;
   }
 
   function checkWinner(){
     if(playerScore >= maxWins){
+      gameRunning = false; // stop game
       alert("You won! Opening math homework...");
       openMathHomework();
-      playerScore = 0;
-      aiScore = 0;
     } else if(aiScore >= maxWins){
+      gameRunning = false; 
       alert("AI won! Try again.");
       playerScore = 0;
       aiScore = 0;
+      resetBall();
+      gameRunning = true;
+      draw();
     }
   }
 
@@ -245,4 +254,3 @@
 </script>
 </body>
 </html>
-
