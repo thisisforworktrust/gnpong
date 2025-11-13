@@ -201,10 +201,21 @@
 
     scoreboard.textContent = `Player: ${playerScore} | AI: ${aiScore}`;
 
-    // Simple AI movement with momentum
-    const aiSpeed = Math.min(Math.abs(ball.dx)*0.7 + 2, 6);
-    if(aiX + paddleWidth/2 < ball.x) aiX += aiSpeed;
-    else if(aiX + paddleWidth/2 > ball.x) aiX -= aiSpeed;
+// --- Medium Difficulty AI ---
+let aiSpeed = 3.5; // medium speed
+
+// AI only tracks ball when it's coming toward it
+if (ball.dy < 0) {
+  
+  // AI predicts future x but with error added
+  let prediction = ball.x + ball.dx * 12;    // small prediction
+  prediction += (Math.random() * 60 - 30);   // error range: -30 to +30px
+
+  // Move toward predicted position
+  if (aiX + paddleWidth / 2 < prediction) aiX += aiSpeed;
+  else if (aiX + paddleWidth / 2 > prediction) aiX -= aiSpeed;
+}
+
 
     requestAnimationFrame(draw);
   }
@@ -254,3 +265,4 @@
 </script>
 </body>
 </html>
+
